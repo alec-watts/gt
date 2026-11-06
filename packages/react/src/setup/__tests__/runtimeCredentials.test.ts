@@ -11,21 +11,30 @@ describe('runtime credentials', () => {
     process.env.NODE_ENV = originalNodeEnv;
   });
 
-  it('reads Vite runtime credentials in development', () => {
+  // src/__tests__/vite.test.ts covers the values gtReact() injects.
+  it('reads GT_PROJECT_ID and GT_API_KEY from process.env on a server', () => {
     process.env.NODE_ENV = 'development';
-    vi.stubEnv('VITE_GT_PROJECT_ID', 'vite-project-id');
-    vi.stubEnv('VITE_GT_DEV_API_KEY', 'vite-dev-api-key');
+    vi.stubEnv('GT_PROJECT_ID', 'project-id');
+    vi.stubEnv('GT_API_KEY', 'api-key');
 
     expect(addRuntimeCredentials({})).toMatchObject({
-      projectId: 'vite-project-id',
-      apiKey: 'vite-dev-api-key',
+      projectId: 'project-id',
+      apiKey: 'api-key',
     });
+  });
+
+  it('does not read GT_API_KEY from process.env in browser code', () => {
+    process.env.NODE_ENV = 'development';
+    vi.stubGlobal('window', {});
+    vi.stubEnv('GT_API_KEY', 'api-key');
+
+    expect(addRuntimeCredentials({}).apiKey).toBeUndefined();
   });
 
   it('keeps explicitly supplied credentials', () => {
     process.env.NODE_ENV = 'development';
-    vi.stubEnv('VITE_GT_PROJECT_ID', 'vite-project-id');
-    vi.stubEnv('VITE_GT_DEV_API_KEY', 'vite-dev-api-key');
+    vi.stubEnv('GT_PROJECT_ID', 'project-id');
+    vi.stubEnv('GT_API_KEY', 'api-key');
 
     expect(
       addRuntimeCredentials({
@@ -35,17 +44,6 @@ describe('runtime credentials', () => {
     ).toMatchObject({
       projectId: 'explicit-project-id',
       apiKey: 'explicit-api-key',
-    });
-  });
-
-  it('does not read the Vite key outside development', () => {
-    process.env.NODE_ENV = 'production';
-    vi.stubEnv('VITE_GT_PROJECT_ID', 'vite-project-id');
-    vi.stubEnv('VITE_GT_DEV_API_KEY', 'vite-dev-api-key');
-
-    expect(addRuntimeCredentials({})).toMatchObject({
-      projectId: 'vite-project-id',
-      apiKey: undefined,
     });
   });
 

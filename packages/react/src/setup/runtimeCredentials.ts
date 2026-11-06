@@ -3,9 +3,8 @@ import { getRuntimeEnvironment, type I18nConfigParams } from 'gt-i18n/internal';
 
 type RuntimeCredentials = Pick<I18nConfigParams, 'projectId' | 'apiKey'>;
 type RuntimeEnv = {
-  DEV?: boolean;
-  VITE_GT_PROJECT_ID?: string;
-  VITE_GT_DEV_API_KEY?: string;
+  GT_PROJECT_ID?: string;
+  GT_API_KEY?: string;
 };
 
 export function addRuntimeCredentials<T extends RuntimeCredentials>(
@@ -39,55 +38,33 @@ const apiKeyInProductionBrowserWarning = createDiagnosticMessage({
   fix: 'Remove apiKey from client code and translate at runtime on your server instead',
 });
 
+// The gtReact() Vite plugin defines these on import.meta.env, and the API key
+// only for the dev server. Server code that Vite does not bundle reads
+// process.env; browser code never reads the key from there, so a bundler that
+// inlines process.env cannot ship it. Plain member access is the form
+// bundlers' define matches.
 function getRuntimeCredentials(): RuntimeCredentials {
   return {
     projectId:
-      readImportMetaVite(
+      readEnvValue(
         () =>
-          (
-            import.meta as ImportMeta & {
-              env?: RuntimeEnv;
-            }
-          ).env?.VITE_GT_PROJECT_ID
-      ) || readProcessEnvViteProjectId(),
+          (import.meta as ImportMeta & { env: RuntimeEnv }).env.GT_PROJECT_ID
+      ) || readEnvValue(() => process.env.GT_PROJECT_ID),
     apiKey:
-      getRuntimeEnvironment() === 'development'
-        ? readImportMetaVite(() =>
-            (import.meta as ImportMeta & { env?: RuntimeEnv }).env?.DEV
-              ? (import.meta as ImportMeta & { env?: RuntimeEnv }).env
-                  ?.VITE_GT_DEV_API_KEY
-              : undefined
-          ) || readProcessEnvViteDevApiKey()
-        : undefined,
+      readEnvValue(
+        () => (import.meta as ImportMeta & { env: RuntimeEnv }).env.GT_API_KEY
+      ) ||
+      (typeof window === 'undefined'
+        ? readEnvValue(() => process.env.GT_API_KEY)
+        : undefined),
   };
 }
 
-function readImportMetaVite(
-  readValue: () => string | undefined
-): string | undefined {
+// The try/catch covers import.meta.env and process missing outside Vite and Node.
+function readEnvValue(readValue: () => string | undefined): string | undefined {
   try {
-    return normalizeEnvValue(readValue());
+    return readValue() || undefined;
   } catch {
     return undefined;
   }
-}
-
-function readProcessEnvViteProjectId(): string | undefined {
-  try {
-    return normalizeEnvValue(process.env.VITE_GT_PROJECT_ID);
-  } catch {
-    return undefined;
-  }
-}
-
-function readProcessEnvViteDevApiKey(): string | undefined {
-  try {
-    return normalizeEnvValue(process.env.VITE_GT_DEV_API_KEY);
-  } catch {
-    return undefined;
-  }
-}
-
-function normalizeEnvValue(value: string | undefined): string | undefined {
-  return value || undefined;
 }
