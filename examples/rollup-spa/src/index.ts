@@ -3,16 +3,14 @@ import { initializeGTSPA } from 'gt-react';
 import gtConfig from '../gt.config.json';
 import loadTranslations from './loadTranslations';
 
-// Credentials are inlined at build time by @rollup/plugin-replace (see
+// The project ID is inlined at build time by @rollup/plugin-replace (see
 // rollup.config.mjs). In this plain-Rollup setup gt-react always resolves to
-// its production runtime in the browser, so these are never used to fetch
-// on-the-fly translations; the committed src/_gt/*.json files cover every
-// locale and empty values are fine. The wiring is kept for parity with the
-// other examples.
+// its production runtime in the browser, so it never fetches on-the-fly
+// translations and takes no API key; the committed src/_gt/*.json files cover
+// every locale and an empty project ID is fine.
 await initializeGTSPA({
   ...gtConfig,
   projectId: process.env.GT_PROJECT_ID,
-  devApiKey: process.env.GT_DEV_API_KEY,
   loadTranslations,
 });
 

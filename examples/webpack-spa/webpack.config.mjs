@@ -9,8 +9,8 @@ import gtConfig from './gt.config.json' with { type: 'json' };
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
-// Load credentials from a local env file. webpack has no import.meta.env, so
-// we read the file here and inject the values with DefinePlugin below.
+// Load the project ID from a local env file. webpack has no import.meta.env,
+// so we read the file here and inject the value with DefinePlugin below.
 // .env.local wins over .env; both are optional and gitignored.
 dotenv.config({ path: path.join(appDir, '.env') });
 dotenv.config({ path: path.join(appDir, '.env.local'), override: true });
@@ -28,7 +28,6 @@ const reactDomDir = fs.realpathSync(
 
 export default (_env, argv) => {
   const mode = argv.mode ?? 'production';
-  const isProduction = mode === 'production';
 
   return {
     mode,
@@ -69,8 +68,7 @@ export default (_env, argv) => {
     },
     plugins: [
       // The GT compiler must run first so it can transform <T> and t() before
-      // the rest of the pipeline. Passing gt.config.json enables dev-mode
-      // translation hot reload when credentials are present.
+      // the rest of the pipeline.
       gtCompiler({ ...gtConfig }),
       new HtmlWebpackPlugin({
         // Reference the template file so HtmlWebpackPlugin watches it in dev.
@@ -78,14 +76,10 @@ export default (_env, argv) => {
       }),
       new webpack.DefinePlugin({
         'process.env.NODE_ENV': JSON.stringify(mode),
-        // Dev-only credentials: inline the env values in development only.
-        // Production serves the committed translation files, so it inlines
-        // empty strings and never embeds a key in the bundle.
+        // The project ID is not secret and is inlined in every build. This
+        // config never inlines an API key: anyone can read one in a bundle.
         'process.env.GT_PROJECT_ID': JSON.stringify(
-          isProduction ? '' : (process.env.REACT_APP_GT_PROJECT_ID ?? '')
-        ),
-        'process.env.GT_DEV_API_KEY': JSON.stringify(
-          isProduction ? '' : (process.env.REACT_APP_GT_DEV_API_KEY ?? '')
+          process.env.GT_PROJECT_ID ?? ''
         ),
       }),
     ],

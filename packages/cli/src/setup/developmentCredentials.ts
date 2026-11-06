@@ -28,6 +28,27 @@ export function productionRuntimeKeyGuidance(dashboardUrl: string): string {
   return `${chalk.dim('For runtime translation in production, create an API key in the dashboard')} ${chalk.cyan(dashboardUrl)} ${chalk.dim('and set GT_API_KEY and GT_PROJECT_ID in your hosting environment.')}`;
 }
 
+// Frameworks without a GT adapter that passes .env.local to client code.
+const NO_ADAPTER_FRAMEWORKS: Partial<
+  Record<NonNullable<SupportedFrameworks>, string>
+> = {
+  gatsby: 'Gatsby',
+  react: 'Create React App',
+  redwood: 'RedwoodJS',
+};
+
+/** How to pass the development credentials where no adapter does it. */
+export function manualCredentialsGuidance(
+  framework: SupportedFrameworks | undefined
+): string | undefined {
+  const name = framework && NO_ADAPTER_FRAMEWORKS[framework];
+  return name
+    ? chalk.dim(
+        `${name} has no GT plugin that reads .env.local: in development, pass { projectId, apiKey } to your GT setup explicitly, and never include the API key in production builds.`
+      )
+    : undefined;
+}
+
 /**
  * Interactive setup keeps the browser login with its device fallback;
  * noninteractive setup always shows a device code (and emits it as a JSON
@@ -293,7 +314,6 @@ export async function provisionDevelopmentCredentials(
   session: OnboardingSession,
   project: DevelopmentProject,
   settings: Settings,
-  framework: SupportedFrameworks | undefined,
   cwd: string = process.cwd()
 ): Promise<void> {
   // Set exactly when the API client sends it in place of the sign-in.
@@ -332,7 +352,7 @@ export async function provisionDevelopmentCredentials(
       )
     );
   session.step('created a development key');
-  await setCredentials({ projectId, apiKey: apiKey.key }, framework, cwd);
+  await setCredentials({ projectId, apiKey: apiKey.key }, cwd);
   session.step('saved development credentials to .env.local');
   const projectLabel = projectName
     ? `${projectName} (${projectId})`

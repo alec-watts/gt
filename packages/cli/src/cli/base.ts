@@ -54,11 +54,11 @@ import {
 import { getDesiredLocales } from '../setup/userInput.js';
 import {
   areCredentialsSet,
-  getDevelopmentEnvNames,
   inspectCredentialsEnvFile,
 } from '../utils/credentials.js';
 import {
   checkDevelopmentProjectInputs,
+  manualCredentialsGuidance,
   productionRuntimeKeyGuidance,
   provisionDevelopmentCredentials,
   resolveDevelopmentProject,
@@ -110,7 +110,6 @@ import {
   findLoadTranslationsFiles,
 } from '../fs/createLoadTranslationsFile.js';
 import { saveLocalEdits } from '../api/saveLocalEdits.js';
-import { resolveProjectId } from '../fs/utils.js';
 import {
   hasValidCredentials,
   hasValidServiceLocales,
@@ -1401,14 +1400,13 @@ See https://www.npmjs.com/package/gt-vue`);
 
     const envFramework =
       setup.framework ?? getConfiguredFramework(existingConfig);
-    // The effective project: an explicit ID replaces a configured one. The
-    // framework's runtime project outranks a stale generic GT_PROJECT_ID.
+    // The effective project: an explicit ID replaces a configured one, which
+    // replaces the environment's (resolved by generateSettings).
     const projectId =
       options.projectId ||
       (typeof existingConfig.projectId === 'string'
         ? existingConfig.projectId
-        : undefined) ||
-      process.env[getDevelopmentEnvNames(envFramework).projectId];
+        : undefined);
     const configUpdate: SetupConfigUpdate = {
       defaultLocale,
       locales,
@@ -1443,15 +1441,11 @@ See https://www.npmjs.com/package/gt-vue`);
       cwd,
       { resolvedConfig: effectiveConfig }
     );
-    // Runtime credentials only count for the project this setup uses; the
-    // framework's project variable is the one paired with its dev key.
-    const runtimeProjectId =
-      process.env[getDevelopmentEnvNames(envFramework).projectId] ??
-      resolveProjectId();
+    // Runtime credentials only count for the project this setup uses.
+    const runtimeProjectId = process.env.GT_PROJECT_ID;
     const runtimeProjectMatches =
       runtimeProjectId === undefined || runtimeProjectId === settings.projectId;
-    const credentialsSet =
-      runtimeProjectMatches && areCredentialsSet(settings, envFramework);
+    const credentialsSet = runtimeProjectMatches && areCredentialsSet(settings);
     const credentialsOption =
       (storage === 'local' && buildTool?.devCredentialsOption) ||
       '--dev-credentials';
@@ -1516,9 +1510,7 @@ See https://www.npmjs.com/package/gt-vue`);
             ? configFilepath
             : 'the environment'
       );
-      await withCredentialsError(() =>
-        inspectCredentialsEnvFile(cwd, { framework: envFramework })
-      );
+      await withCredentialsError(() => inspectCredentialsEnvFile(cwd, true));
     }
 
     if (reactSetup && buildTool) await buildTool.preflight(cwd);
@@ -1705,14 +1697,13 @@ See https://www.npmjs.com/package/gt-vue`);
 
     if (project) {
       await withCredentialsError(() =>
-        provisionDevelopmentCredentials(
-          session,
-          project,
-          settings,
-          envFramework,
-          cwd
-        )
+        provisionDevelopmentCredentials(session, project, settings, cwd)
       );
+      if (!reactSetup && buildTool?.checkCredentialsPlugin) {
+        reportSetupResult(await buildTool.checkCredentialsPlugin(cwd));
+      }
+      const guidance = manualCredentialsGuidance(envFramework);
+      if (guidance) logger.message(guidance);
       logger.message(productionRuntimeKeyGuidance(settings.dashboardUrl));
     }
 
