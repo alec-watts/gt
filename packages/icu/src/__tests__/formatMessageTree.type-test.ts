@@ -6,6 +6,7 @@ import {
   type MessageTree,
 } from '../index';
 import { formatMessage } from '../parser';
+import type { FormattingTree } from '../tree/messageTree';
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
@@ -228,3 +229,12 @@ formatMessage('Hi {name}', 'en', { name: 'Ada' });
 formatMessageTree(tree, undefined, {}, options);
 // @ts-expect-error a message is formatted with the values it is given
 formatMessage('Hi', 'en', undefined, options);
+
+// An ICU string's syntax tree holds styles a message tree does not, so the
+// formatter reads both and nothing else takes one for a message tree.
+declare const formattingTree: FormattingTree;
+declare function readMessageTree(tree: MessageTree): void;
+declare function readFormattingTree(tree: FormattingTree): void;
+readFormattingTree(tree);
+// @ts-expect-error a formatting tree is not a message tree
+readMessageTree(formattingTree);
