@@ -10,13 +10,14 @@ import type { ExtendedNumberFormatOptions } from '../types-dir/ast';
 import type {
   DateTimeNode,
   MessageBranches,
+  MessageNode,
   MessageTree,
   NumberNode,
   PluralNode,
   SelectNode,
   TagNode,
 } from '../tree/messageTree';
-import { branchNodes } from '../tree/walk';
+import { messageNodes } from '../tree/walk';
 import {
   DATE_TIME_STYLE_NAMES,
   type DateTimeStyleName,
@@ -119,7 +120,7 @@ type FormatContext<R> = FormatMessageTreeOptions & {
  * A rich value, or a tag formatter's result, is kept as a part:
  *
  *   formatMessageTree(
- *     ['Read the ', ['b', 'tag', ['terms']]],
+ *     ['Read the ', ['b', 'tag', 'terms']],
  *     'en',
  *     { b: (parts) => <b>{parts}</b> },
  *     { timeZone }
@@ -173,7 +174,7 @@ export function formatParsedTree<R>(
   { formats, timeZone }: FormatMessageTreeOptions
 ): Part<R> | Part<R>[] {
   // Most messages are plain text, which needs no formatter state.
-  if (tree.length === 1 && typeof tree[0] === 'string') return tree[0];
+  if (typeof tree === 'string') return tree;
   const parts = formatNodes(tree, {
     message,
     locales,
@@ -189,7 +190,7 @@ export function formatParsedTree<R>(
 type BranchNode = SelectNode | PluralNode;
 
 function formatNodes<R>(
-  nodes: MessageTree,
+  nodes: MessageNode[],
   context: FormatContext<R>,
   currentPluralValue?: PluralValue
 ): Part<R>[] {
@@ -315,7 +316,7 @@ function formatNodes<R>(
           );
         }
         const children = formatNodes(
-          (node as TagNode)[2],
+          messageNodes((node as TagNode)[2]),
           context,
           currentPluralValue
         );
@@ -340,9 +341,9 @@ function formatsOf<R>(
 function ownBranch(
   branches: MessageBranches,
   key: string
-): MessageTree | undefined {
+): MessageNode[] | undefined {
   const branch = ownOption(branches, key);
-  return branch === undefined ? undefined : branchNodes(branch);
+  return branch === undefined ? undefined : messageNodes(branch);
 }
 
 function plainValueText<R>(value: MessageValue<R>): Part<R> {
