@@ -31,7 +31,6 @@ type IntlStyle =
   | string
   | ExtendedNumberFormatOptions
   | Intl.DateTimeFormatOptions
-  | null
   | undefined;
 type FormatReader<Format> = (element: FormatElement) => Format;
 
@@ -135,8 +134,9 @@ function treeNode(element: FormatElement): FormattedNode {
   const fail = (reason: string) =>
     new Error(createUnsupportedTreeFormatError(printAST([element]), reason));
   let style: IntlStyle;
-  const skeleton = element.style;
-  if (skeleton == null || typeof skeleton === 'string') {
+  // The parser writes no style as null; a tree leaves it out.
+  const skeleton = element.style ?? undefined;
+  if (typeof skeleton !== 'object') {
     style = skeleton;
   } else if (skeleton.type === SKELETON_TYPE.number) {
     const [token, ...rest] = skeleton.tokens;
@@ -199,8 +199,8 @@ function fromNode(node: MessageNode): MessageFormatElement {
         );
       }
       if (node[1] === 'number') {
-        const style = node[2] ?? null;
-        const unit = typeof style === 'object' ? style : null;
+        const style = node[2];
+        const unit = typeof style === 'object' ? style : undefined;
         return {
           type: TYPE.number,
           value,
@@ -215,8 +215,8 @@ function fromNode(node: MessageNode): MessageFormatElement {
               : null,
         };
       }
-      const style = node[2] ?? null;
-      const fields = typeof style === 'object' ? style : null;
+      const style = node[2];
+      const fields = typeof style === 'object' ? style : undefined;
       const pattern = fields && printDateTimeSkeleton(fields);
       return {
         type: node[1] === 'date' ? TYPE.date : TYPE.time,
