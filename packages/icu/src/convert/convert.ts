@@ -12,9 +12,10 @@ import { fromMessageTree, toMessageTree } from './syntaxTree';
  *   // [['n', 'plural', { one: [0, ' file'], other: [0, ' files'] }]]
  *
  * A tree holds only what ICU spells, so a translation of a tree printed with
- * `messageTreeToIcu` converts back on its own. Throws a `SyntaxError` for an
- * invalid ICU string, and an `Error` for a format a tree cannot hold, such as
- * `{n, number, ::.00}`, whose options are formatting context.
+ * `messageTreeToIcu` converts back on its own; `checkTranslation` checks it
+ * against its source. Throws a `SyntaxError` for an invalid ICU string, and
+ * an `Error` for a format a tree cannot hold, such as `{n, number, ::.00}`,
+ * whose options are formatting context.
  */
 export function icuToMessageTree(icu: string): MessageTree {
   return normalizeTree(toMessageTree(parse(icu)));
