@@ -11,12 +11,11 @@ import {
   type NumberNode,
   type SelectNode,
 } from '../index';
+import { buildMessageTree, type MessageTreeHole } from '../internal';
 import {
-  buildMessageTree,
   DATE_FIELD_OPTIONS,
   TIME_FIELD_OPTIONS,
-  type MessageTreeHole,
-} from '../internal';
+} from '../settings/formatOptions';
 import { DATE_TIME_FIELD_SYMBOLS } from '../convert/skeleton';
 import { normalizeTree } from '../tree/canonical';
 import { formatMessage, formatMessageTree } from './format';
@@ -258,7 +257,7 @@ describe('messageTreeToIcu', () => {
     expect(icuToMessageTree(icu)).toEqual(tree);
   });
 
-  it('prints adjacent text as one literal', () => {
+  it('prints adjacent text, which the types allow, as one literal', () => {
     // Quoting '{' and '}' separately would print '{''}', an escaped quote.
     const tree: MessageTree = ['{', '}', ['b', 'tag', ["'", '{']]];
     expect(icuToMessageTree(messageTreeToIcu(tree))).toEqual([
